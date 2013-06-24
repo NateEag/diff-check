@@ -1,0 +1,14 @@
+{
+    "name": "nateeag/php-codesniffer-pre-commit-hook",
+    "description": "Git pre-commit hook that runs PHP CodeSniffer, and only complains about sniffs on modified lines.",
+    "authors": [
+        {
+            "name": "Nate Eagleson",
+            "homepage": "http://www.nateeag.com",
+            "role": "some guy hacking on a Sunday afternevening"
+        }
+    ],
+    "require": {
+        "squizlabs/php_codesniffer": "master-dev"
+    }
+}
