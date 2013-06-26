@@ -1,39 +1,56 @@
 <?php
 
+define('DIR_SEP', DIRECTORY_SEPARATOR);
+
 class PreCommitHookTest extends PHPUnit_Framework_TestCase
 {
     protected function setUp()
     {
         $tmp_dir = sys_get_temp_dir();
         $timestamp = time();
-        $dir_sep = DIRECTORY_SEPARATOR;
-        $this->git_dir = $tmp_dir . $dir_sep .
+        $this->git_dir = $tmp_dir . DIR_SEP .
             "php-cs-hook-test.$timestamp";
+        $this->fixture_dir = __DIR__ . DIR_SEP . 'fixtures';
 
         exec("git init " . $this->git_dir);
 
         // GRIPE Lame hack install technique FTL...
-        $git_hooks_dir = $this->git_dir . $dir_sep . ".git" .
-            $dir_sep . "hooks";
-        $project_dir = __DIR__ . $dir_sep . "..";
+        // DEBUG When I get a chance, I should make running a build part of my
+        // setup for the tests, so I can then use whatever install technique
+        // we'll normally use. I'm thinking a .phar?
+        $git_hooks_dir = $this->git_dir . DIR_SEP . ".git" .
+            DIR_SEP . "hooks";
+        $project_dir = __DIR__ . DIR_SEP . "..";
 
         exec(
-            'cp -R ' . $project_dir . $dir_sep . 'vendor ' .
+            'cp -R ' . $project_dir . DIR_SEP . 'vendor ' .
             $git_hooks_dir
         );
 
-        $pre_commit_hook_path = $git_hooks_dir . $dir_sep . 'pre-commit';
+        $pre_commit_hook_path = $git_hooks_dir . DIR_SEP . 'pre-commit';
         copy(
-            $project_dir . $dir_sep . 'pre-commit.php',
+            $project_dir . DIR_SEP . 'pre-commit.php',
             $pre_commit_hook_path
         );
 
         chmod($pre_commit_hook_path, 0755);
     }
 
-    public function testSomething()
+    public function testGoodCommit()
     {
-        // STUB I need to put an actual test in here eventually.
+        $result = copy(
+            $this->fixture_dir . DIR_SEP . 'functions.php',
+            $this->git_dir . DIR_SEP . 'functions.php'
+        );
+
+        exec(
+            'cd ' . $this->git_dir . ' && git add functions.php && ' .
+            'git commit -m a',
+            $output = array(),
+            $status
+        );
+
+        $this->assertEquals(0, $status);
     }
 
     protected function tearDown()
