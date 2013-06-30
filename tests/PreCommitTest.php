@@ -36,10 +36,10 @@ class PreCommitHookTest extends PHPUnit_Framework_TestCase
         chmod($pre_commit_hook_path, 0755);
     }
 
-    public function testGoodCommit()
+    public function testFirstCommit()
     {
         $result = copy(
-            $this->fixture_dir . DIR_SEP . 'functions.php',
+            $this->fixture_dir . DIR_SEP . 'first-commit'. DIR_SEP . 'functions.php',
             $this->git_dir . DIR_SEP . 'functions.php'
         );
 

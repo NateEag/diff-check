@@ -1,6 +1,10 @@
 #! /usr/bin/env php
 <?php
 
+// Save real working directory, since PHP_CodeSniffer stomps it on being
+// instantiated.
+define('CWD', getcwd());
+
 require_once realpath(__DIR__ . '/vendor/autoload.php');
 
 function main()
@@ -17,33 +21,80 @@ function main()
 
     $staged_errors = array();
     foreach ($staged_files as $file) {
+        $staged_file_errors = array();
+
         // Committing with syntax errors is *never* okay.
         $syntax_check_msgs = array();
         exec("php -l $file", $syntax_check_msgs, $syntax_check_status);
         if ($syntax_check_status !== 0) {
-            $staged_errors[$file] = $syntax_check_msgs[2];
+            $staged_file_errors[] = $syntax_check_msgs[2];
         }
 
-        // Run PHP CS on $file (must eventually load config options and
-        // coding style from somewhere)
+        // Run PHP CS on $file
+        // (must eventually load config options and coding style from somewhere)
+        // Create an instance of PHP_CodeSniffer.
+        $phpcs = new PHP_CodeSniffer();
+        $phpcs->setTokenListeners('PSR2');
+        // GRIPE I don't understand why I have to call these, but apparently I
+        // do.
+        $phpcs->populateCustomRules();
+        $phpcs->populateTokenListeners();
+        $phpcs_file = $phpcs->processFile(CWD . DIRECTORY_SEPARATOR . $file);
+        $style_errors = $phpcs_file->getErrors();
+        $warnings = $phpcs_file->getWarnings();
 
-        if (count($style_errors) < 1) {
+        if (count($style_errors) < 1 && count($warnings) < 1) {
             continue;
         }
 
         // Get array of line numbers that are added by the staged patch.
-        $new_line_nums = array(); // STUB Some invocation of git diff.
-
-        foreach ($style_errors as $error) {
-            // If the error is on a modified line, add it to our error list.
-            // Else, bail.
+        $added_line_nums = array();
+        $diff_lines = array();
+        // GRIPE Have to move back to CWD so shelling out to git diff works.
+        // I'm hoping to add support for some of what I need to gitter, maybe?
+        chdir(CWD);
+        $new_line_nums = exec("git diff --cached -U0 $file", $diff_lines);
+        $line_num = null;
+        foreach ($diff_lines as $line) {
+            $prefix = substr($line, 0, 3);
+            if (substr($prefix, 0, 2) === '@@') {
+                $start_pos = strpos($line, '+');
+                $end_pos = strpos($line, ',', $start_pos);
+                $line_num = (int) substr($line, $start_pos, $end_pos - $start_pos);
+            } elseif (substr($prefix, 0, 1) === '+' && $prefix !== '+++') {
+                $added_line_nums[] = $line_num;
+                $line_num++;
+            }
         }
+
+        foreach ($style_errors as $line_num => $error) {
+            if (in_array($line_num, $added_line_nums) !== true) {
+                continue;
+            }
+
+            foreach ($error as $column => $column_errors) {
+                foreach ($column_errors as $error_info) {
+                    $staged_file_errors[] = $error_info['message'] .
+                        " (line $line_num, column $column)";
+                }
+            }
+        }
+
+        $staged_errors[$file] = $staged_file_errors;
     }
 
-    if (count($staged_errors) > 0) {
-        // STUB Output list of errors that need fixed, with file:line num,
-        // and bail.
-        exit(1);
+    foreach ($staged_errors as $file => $errors) {
+        if (count($errors) > 0) {
+            echo "$file has style errors:\n";
+
+            foreach ($errors as $error) {
+                echo $error . "\n";
+            }
+
+            echo "Commit canceled. Fix style errors and try again.\n";
+
+            exit(1);
+        }
     }
 
     exit(0);
