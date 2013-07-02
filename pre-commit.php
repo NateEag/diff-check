@@ -1,6 +1,17 @@
 #! /usr/bin/env php
 <?php
 
+/* @brief Git pre-commit hook to enforce a PHP coding style.
+ *
+ * It uses CodeSniffer to check the current patch's style, and aborts the
+ * commit if it adds style errors.
+ *
+ * Note that unlike many CodeSniffer-based pre-commit hooks, it only checks the
+ * lines being added for style errors. This makes it ideal for use with large,
+ * ugly codebases, as it lets you enforce a coding style without forcing devs
+ * to fix the bulk of an ugly file in order to pass style checks.
+ */
+
 // Save real working directory, since PHP_CodeSniffer stomps it on being
 // instantiated.
 define('CWD', getcwd());
