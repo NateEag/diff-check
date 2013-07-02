@@ -41,9 +41,9 @@ function main()
         $phpcs->populateTokenListeners();
         $phpcs_file = $phpcs->processFile(CWD . DIRECTORY_SEPARATOR . $file);
         $style_errors = $phpcs_file->getErrors();
-        $warnings = $phpcs_file->getWarnings();
+        $style_warnings = $phpcs_file->getWarnings();
 
-        if (count($style_errors) < 1 && count($warnings) < 1) {
+        if (count($style_errors) < 1 && count($style_warnings) < 1) {
             continue;
         }
 
@@ -53,7 +53,7 @@ function main()
         // GRIPE Have to move back to CWD so shelling out to git diff works.
         // I'm hoping to add support for some of what I need to gitter, maybe?
         chdir(CWD);
-        $new_line_nums = exec("git diff --cached -U0 $file", $diff_lines);
+        exec("git diff --cached -U0 $file", $diff_lines, $status);
         $line_num = null;
         foreach ($diff_lines as $line) {
             $prefix = substr($line, 0, 3);
@@ -68,6 +68,21 @@ function main()
         }
 
         foreach ($style_errors as $line_num => $error) {
+            if (in_array($line_num, $added_line_nums) !== true) {
+                continue;
+            }
+
+            foreach ($error as $column => $column_errors) {
+                foreach ($column_errors as $error_info) {
+                    $staged_file_errors[] = $error_info['message'] .
+                        " (line $line_num, column $column)";
+                }
+            }
+        }
+
+        // GRIPE This is incredibly un-DRY. Hopefully when I abstract these
+        // into somewhere else they get cleaned up.
+        foreach ($style_warnings as $line_num => $error) {
             if (in_array($line_num, $added_line_nums) !== true) {
                 continue;
             }

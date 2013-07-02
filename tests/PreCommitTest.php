@@ -70,6 +70,23 @@ class PreCommitHookTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(1, $status);
     }
 
+    public function testPreventStyleWarningCommit()
+    {
+        copy(
+            $this->fixture_dir . DIR_SEP . 'add-side-effect'. DIR_SEP . 'functions.php',
+            $this->git_dir . DIR_SEP . 'functions.php'
+        );
+
+        exec(
+            'cd ' . $this->git_dir . ' && git add functions.php && ' .
+            'git commit -m a',
+            $output = array(),
+            $status
+        );
+
+        $this->assertEquals(1, $status);
+    }
+
     protected function tearDown()
     {
         exec('rm -rf ' . $this->git_dir);
