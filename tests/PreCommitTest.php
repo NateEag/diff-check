@@ -87,6 +87,37 @@ class PreCommitHookTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(1, $status);
     }
 
+    public function testIgnoreStyleErrorsInEarlierCommit()
+    {
+        copy(
+            $this->fixture_dir . DIR_SEP . 'add-bad-function'. DIR_SEP . 'functions.php',
+            $this->git_dir . DIR_SEP . 'functions.php'
+        );
+
+        exec(
+            'cd ' . $this->git_dir . ' && git add functions.php && ' .
+            'git commit --no-verify -m a',
+            $output = array(),
+            $status
+        );
+
+        $this->assertEquals(0, $status);
+
+        copy(
+            $this->fixture_dir . DIR_SEP . 'edit-bad-function'. DIR_SEP . 'functions.php',
+            $this->git_dir . DIR_SEP . 'functions.php'
+        );
+
+        exec(
+            'cd ' . $this->git_dir . ' && git add functions.php && ' .
+            'git commit -m a',
+            $output = array(),
+            $status
+        );
+
+        $this->assertEquals(0, $status);
+    }
+
     protected function tearDown()
     {
         exec('rm -rf ' . $this->git_dir);
