@@ -34,9 +34,8 @@ function get_staged_PHP_files()
 
     $staged_PHP_files = array();
     foreach ($staged_files as $filename) {
-        $parts = explode('.', $filename);
-        $num_parts = count($parts);
-        if ($parts[$num_parts - 1] === 'php') {
+        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        if ($ext === 'php') {
             $staged_PHP_files[] = $filename;
         }
 
