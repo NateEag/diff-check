@@ -45,87 +45,94 @@ function get_staged_PHP_files()
     return $staged_PHP_files;
 }
 
+/* @brief Return an array of messages outlining style errors in $filename.
+ */
+function get_style_errors($filename)
+{
+    $staged_file_errors = array();
+
+    // Committing with syntax errors is *never* okay.
+    $syntax_check_msgs = array();
+    exec("php -l $filename", $syntax_check_msgs, $syntax_check_status);
+    if ($syntax_check_status !== 0) {
+        $staged_file_errors[] = $syntax_check_msgs[2];
+    }
+
+    // Run PHP CS on $filename
+    // (must eventually load config options and coding style from somewhere)
+    // Create an instance of PHP_CodeSniffer.
+    $phpcs = new PHP_CodeSniffer();
+    $phpcs->setTokenListeners('PSR2');
+    // GRIPE I don't understand why I have to call these, but apparently I
+    // do.
+    $phpcs->populateCustomRules();
+    $phpcs->populateTokenListeners();
+    $phpcs_file = $phpcs->processFile(CWD . DIRECTORY_SEPARATOR . $filename);
+    $style_errors = $phpcs_file->getErrors();
+    $style_warnings = $phpcs_file->getWarnings();
+
+    if (count($style_errors) < 1 && count($style_warnings) < 1) {
+        return array();
+    }
+
+    // Get array of line numbers that are added by the staged patch.
+    $added_line_nums = array();
+    $diff_lines = array();
+    // GRIPE Have to move back to CWD so shelling out to git diff works.
+    // I'm hoping to add support for some of what I need to gitter, maybe?
+    chdir(CWD);
+    exec("git diff --cached -U0 $filename", $diff_lines, $status);
+    $line_num = null;
+    foreach ($diff_lines as $line) {
+        $prefix = substr($line, 0, 3);
+        if (substr($prefix, 0, 2) === '@@') {
+            $start_pos = strpos($line, '+');
+            $end_pos = strpos($line, ',', $start_pos);
+            $line_num = (int) substr($line, $start_pos, $end_pos - $start_pos);
+        } elseif (substr($prefix, 0, 1) === '+' && $prefix !== '+++') {
+            $added_line_nums[] = $line_num;
+            $line_num++;
+        }
+    }
+
+    foreach ($style_errors as $line_num => $error) {
+        if (in_array($line_num, $added_line_nums) !== true) {
+            continue;
+        }
+
+        foreach ($error as $column => $column_errors) {
+            foreach ($column_errors as $error_info) {
+                $staged_file_errors[] = $error_info['message'] .
+                    " (line $line_num, column $column)";
+            }
+        }
+    }
+
+    // GRIPE This is incredibly un-DRY. Hopefully when I abstract these
+    // into somewhere else they get cleaned up.
+    foreach ($style_warnings as $line_num => $error) {
+        if (in_array($line_num, $added_line_nums) !== true) {
+            continue;
+        }
+
+        foreach ($error as $column => $column_errors) {
+            foreach ($column_errors as $error_info) {
+                $staged_file_errors[] = $error_info['message'] .
+                    " (line $line_num, column $column)";
+            }
+        }
+    }
+
+    return $staged_file_errors;
+}
+
 function main()
 {
     $staged_files = get_staged_PHP_files();
 
     $staged_errors = array();
     foreach ($staged_files as $file) {
-        $staged_file_errors = array();
-
-        // Committing with syntax errors is *never* okay.
-        $syntax_check_msgs = array();
-        exec("php -l $file", $syntax_check_msgs, $syntax_check_status);
-        if ($syntax_check_status !== 0) {
-            $staged_file_errors[] = $syntax_check_msgs[2];
-        }
-
-        // Run PHP CS on $file
-        // (must eventually load config options and coding style from somewhere)
-        // Create an instance of PHP_CodeSniffer.
-        $phpcs = new PHP_CodeSniffer();
-        $phpcs->setTokenListeners('PSR2');
-        // GRIPE I don't understand why I have to call these, but apparently I
-        // do.
-        $phpcs->populateCustomRules();
-        $phpcs->populateTokenListeners();
-        $phpcs_file = $phpcs->processFile(CWD . DIRECTORY_SEPARATOR . $file);
-        $style_errors = $phpcs_file->getErrors();
-        $style_warnings = $phpcs_file->getWarnings();
-
-        if (count($style_errors) < 1 && count($style_warnings) < 1) {
-            continue;
-        }
-
-        // Get array of line numbers that are added by the staged patch.
-        $added_line_nums = array();
-        $diff_lines = array();
-        // GRIPE Have to move back to CWD so shelling out to git diff works.
-        // I'm hoping to add support for some of what I need to gitter, maybe?
-        chdir(CWD);
-        exec("git diff --cached -U0 $file", $diff_lines, $status);
-        $line_num = null;
-        foreach ($diff_lines as $line) {
-            $prefix = substr($line, 0, 3);
-            if (substr($prefix, 0, 2) === '@@') {
-                $start_pos = strpos($line, '+');
-                $end_pos = strpos($line, ',', $start_pos);
-                $line_num = (int) substr($line, $start_pos, $end_pos - $start_pos);
-            } elseif (substr($prefix, 0, 1) === '+' && $prefix !== '+++') {
-                $added_line_nums[] = $line_num;
-                $line_num++;
-            }
-        }
-
-        foreach ($style_errors as $line_num => $error) {
-            if (in_array($line_num, $added_line_nums) !== true) {
-                continue;
-            }
-
-            foreach ($error as $column => $column_errors) {
-                foreach ($column_errors as $error_info) {
-                    $staged_file_errors[] = $error_info['message'] .
-                        " (line $line_num, column $column)";
-                }
-            }
-        }
-
-        // GRIPE This is incredibly un-DRY. Hopefully when I abstract these
-        // into somewhere else they get cleaned up.
-        foreach ($style_warnings as $line_num => $error) {
-            if (in_array($line_num, $added_line_nums) !== true) {
-                continue;
-            }
-
-            foreach ($error as $column => $column_errors) {
-                foreach ($column_errors as $error_info) {
-                    $staged_file_errors[] = $error_info['message'] .
-                        " (line $line_num, column $column)";
-                }
-            }
-        }
-
-        $staged_errors[$file] = $staged_file_errors;
+        $staged_errors[$file] = get_style_errors($file);
     }
 
     foreach ($staged_errors as $file => $errors) {
