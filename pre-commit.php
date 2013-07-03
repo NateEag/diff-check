@@ -12,10 +12,6 @@
  * to fix the bulk of an ugly file in order to pass style checks.
  */
 
-// Save real working directory, since PHP_CodeSniffer stomps it on being
-// instantiated.
-define('CWD', getcwd());
-
 require_once realpath(__DIR__ . '/vendor/autoload.php');
 
 /* @brief Return an array of files that have been staged for the current commit.
@@ -50,9 +46,6 @@ function get_staged_line_numbers($filename)
 {
     $added_line_nums = array();
     $diff_lines = array();
-    // GRIPE Have to move back to CWD so shelling out to git diff works.
-    // I'm hoping to add support for some of what I need to gitter, maybe?
-    chdir(CWD);
     exec("git diff --cached -U0 $filename", $diff_lines, $status);
     $line_num = null;
     foreach ($diff_lines as $line) {
@@ -85,16 +78,18 @@ function get_style_errors($filename)
 
     // Run PHP CS on $filename
     // (must eventually load config options and coding style from somewhere)
-    // Create an instance of PHP_CodeSniffer.
+    // Save cwd so we can restore it after CS stomps it.
+    $cwd = getcwd();
     $phpcs = new PHP_CodeSniffer();
     $phpcs->setTokenListeners('PSR2');
     // GRIPE I don't understand why I have to call these, but apparently I
     // do.
     $phpcs->populateCustomRules();
     $phpcs->populateTokenListeners();
-    $phpcs_file = $phpcs->processFile(CWD . DIRECTORY_SEPARATOR . $filename);
+    $phpcs_file = $phpcs->processFile($cwd . DIRECTORY_SEPARATOR . $filename);
     $style_errors = $phpcs_file->getErrors();
     $style_warnings = $phpcs_file->getWarnings();
+    chdir($cwd);
 
     if (count($style_errors) < 1 && count($style_warnings) < 1) {
         return $staged_file_errors;
@@ -102,7 +97,6 @@ function get_style_errors($filename)
 
     // Get array of line numbers that are added by the staged patch.
     $added_line_nums = get_staged_line_numbers($filename);
-
     foreach ($style_errors as $line_num => $error) {
         if (in_array($line_num, $added_line_nums) !== true) {
             continue;
