@@ -6,10 +6,10 @@
  * It uses CodeSniffer to check the current patch's style, and aborts the
  * commit if it adds style errors.
  *
- * Note that unlike many CodeSniffer-based pre-commit hooks, it only checks the
- * lines being added for style errors. This makes it ideal for use with large,
- * ugly codebases, as it lets you enforce a coding style without forcing devs
- * to fix the bulk of an ugly file in order to pass style checks.
+ * Unlike many CodeSniffer-based pre-commit hooks, it only checks the lines
+ * being added for style errors. This makes it ideal for use with large, ugly
+ * codebases, as it lets you enforce a coding style without forcing devs to fix
+ * the bulk of an ugly file in order to pass style checks.
  */
 
 require_once realpath(__DIR__ . '/vendor/autoload.php');
@@ -95,7 +95,7 @@ function get_style_errors($filename)
         return $staged_file_errors;
     }
 
-    // Get array of line numbers that are added by the staged patch.
+    // Find the style errors that are actually part of the staged changes.
     $added_line_nums = get_staged_line_numbers($filename);
     foreach ($style_errors as $line_num => $error) {
         if (in_array($line_num, $added_line_nums) !== true) {
