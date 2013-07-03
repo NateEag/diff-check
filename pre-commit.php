@@ -38,10 +38,36 @@ function get_staged_PHP_files()
         if ($ext === 'php') {
             $staged_PHP_files[] = $filename;
         }
-
     }
 
     return $staged_PHP_files;
+}
+
+/* @brief Return an array of line numbers added to $filename in the current
+ * commit.
+ */
+function get_staged_line_numbers($filename)
+{
+    $added_line_nums = array();
+    $diff_lines = array();
+    // GRIPE Have to move back to CWD so shelling out to git diff works.
+    // I'm hoping to add support for some of what I need to gitter, maybe?
+    chdir(CWD);
+    exec("git diff --cached -U0 $filename", $diff_lines, $status);
+    $line_num = null;
+    foreach ($diff_lines as $line) {
+        $prefix = substr($line, 0, 3);
+        if (substr($prefix, 0, 2) === '@@') {
+            $start_pos = strpos($line, '+');
+            $end_pos = strpos($line, ',', $start_pos);
+            $line_num = (int) substr($line, $start_pos, $end_pos - $start_pos);
+        } elseif (substr($prefix, 0, 1) === '+' && $prefix !== '+++') {
+            $added_line_nums[] = $line_num;
+            $line_num++;
+        }
+    }
+
+    return $added_line_nums;
 }
 
 /* @brief Return an array of messages outlining style errors in $filename.
@@ -71,28 +97,11 @@ function get_style_errors($filename)
     $style_warnings = $phpcs_file->getWarnings();
 
     if (count($style_errors) < 1 && count($style_warnings) < 1) {
-        return array();
+        return $staged_file_errors;
     }
 
     // Get array of line numbers that are added by the staged patch.
-    $added_line_nums = array();
-    $diff_lines = array();
-    // GRIPE Have to move back to CWD so shelling out to git diff works.
-    // I'm hoping to add support for some of what I need to gitter, maybe?
-    chdir(CWD);
-    exec("git diff --cached -U0 $filename", $diff_lines, $status);
-    $line_num = null;
-    foreach ($diff_lines as $line) {
-        $prefix = substr($line, 0, 3);
-        if (substr($prefix, 0, 2) === '@@') {
-            $start_pos = strpos($line, '+');
-            $end_pos = strpos($line, ',', $start_pos);
-            $line_num = (int) substr($line, $start_pos, $end_pos - $start_pos);
-        } elseif (substr($prefix, 0, 1) === '+' && $prefix !== '+++') {
-            $added_line_nums[] = $line_num;
-            $line_num++;
-        }
-    }
+    $added_line_nums = get_staged_line_numbers($filename);
 
     foreach ($style_errors as $line_num => $error) {
         if (in_array($line_num, $added_line_nums) !== true) {
