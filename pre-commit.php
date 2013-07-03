@@ -20,7 +20,7 @@ require_once realpath(__DIR__ . '/vendor/autoload.php');
 
 /* @brief Return an array of files that have been staged for the current commit.
  */
-function get_staged_files()
+function get_staged_PHP_files()
 {
     // Get array of files being added to commit (git diff --cached should work)
     // GRIPE I should probably expand Gitter to support this operation, rather
@@ -32,12 +32,22 @@ function get_staged_files()
         throw new RuntimeException("$cmd exit code was $status!");
     }
 
-    return $staged_files;
+    $staged_PHP_files = array();
+    foreach ($staged_files as $filename) {
+        $parts = explode('.', $filename);
+        $num_parts = count($parts);
+        if ($parts[$num_parts - 1] === 'php') {
+            $staged_PHP_files[] = $filename;
+        }
+
+    }
+
+    return $staged_PHP_files;
 }
 
 function main()
 {
-    $staged_files = get_staged_files();
+    $staged_files = get_staged_PHP_files();
 
     $staged_errors = array();
     foreach ($staged_files as $file) {
