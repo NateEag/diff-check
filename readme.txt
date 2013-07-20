@@ -7,5 +7,4 @@ However, when you're working on large legacy codebases, with files thousands of 
 
 Therefore, this little project has come to be.
 
-The goal: run PHP CS on the files being comitted, but only complain if errors are detected on lines the current commit adds.
-
+The goal: run PHP CS on the files being committed, but only complain about errors the current commit adds.
