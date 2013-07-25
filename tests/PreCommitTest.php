@@ -1,6 +1,12 @@
 <?php
 
-define('DIR_SEP', DIRECTORY_SEPARATOR);
+// GRIPE I originally defined this using DIRECTORY_SEPARATOR while working on
+// OS X so that it'd run happily on Windows.
+// But, irony of ironies, since I'm running this in Git Bash on Windows, it
+// died horribly due to my "portable" code. Thus, this is being flipped to just
+// '/', since on Windows it'll almost always be run from within Git Bash. Not
+// many other contexts you'd want to use a git hook script in.
+define('DIR_SEP', '/');
 
 class PreCommitHookTest extends PHPUnit_Framework_TestCase
 {
