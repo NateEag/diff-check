@@ -146,13 +146,22 @@ function main()
     $staged_errors = filter_errors_by_cur_diff($errs_in_staged_files);
 
     $cancel_commit = false;
+    $msg_regex = isset($config['msg_regex']) ?
+        $config['msg_regex']:
+        '/(.*)/'; // By default, capture the whole message.
+    if (isset($config['msg_regex'])) {
+        $msg_regex = $config['msg_regex'];
+    }
+
     foreach ($staged_errors as $file => $file_errors) {
         if (count($file_errors) > 0) {
             echo "$file has style errors:\n";
 
             foreach ($file_errors as $line_num => $line_errors) {
                 foreach ($line_errors as $error) {
-                    echo $error . "\n";
+                    $matches = array();
+                    preg_match($msg_regex, $error, $matches);
+                    echo $matches[1] . "\n";
                 }
             }
 

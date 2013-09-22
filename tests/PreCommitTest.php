@@ -43,11 +43,12 @@ class PreCommitHookTest extends PHPUnit_Framework_TestCase
         $command_path = $git_hooks_dir . DIR_SEP .
             implode(DIR_SEP, array('vendor', 'bin', 'phpcs'));
         $command = $command_path . ' --standard=PSR2 --report=emacs';
-        $regex = '/:([0-9]+):[0-9]+/';
+        $regex = '';
         file_put_contents(
             $git_hooks_dir . DIR_SEP . 'pre-commit.conf',
             '{"command": "' . $command . '", ' .
-            '"error_line_num_regex": "' . $regex . '"}'
+            '"error_line_num_regex": "/:([0-9]+):[0-9]+/", ' .
+            '"msg_regex": "/:[0-9]+:[0-9]+: (.*)/"}'
         );
 
         chmod($pre_commit_hook_path, 0755);
