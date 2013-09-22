@@ -94,7 +94,7 @@ function get_style_errors($filename, $cmd, $line_match_regex)
 
     // Run the specified command on $filename.
     $output = array();
-    exec($cmd . ' ' . $filename, $output);
+    exec($cmd . ' ' . escapeshellarg($filename), $output);
 
     foreach ($output as $line) {
         $matches = array();
@@ -113,16 +113,29 @@ function get_style_errors($filename, $cmd, $line_match_regex)
     return $staged_file_errors;
 }
 
+/* @brief Return array of end-user config data for this script.
+ *
+ * Currently assumes config file lives in the same dir as this script, but that
+ * might be dumb. Consider adding a command-line flag for specifying
+ * the path.
+ */
+function load_config()
+{
+    $config_file_path = __FILE__ . '.conf';
+    $json = file_get_contents($config_file_path);
+
+    return json_decode($json, true);
+}
+
 function main()
 {
-    $staged_files = get_staged_files();
+    $config = load_config();
 
-    // DEBUG This should be loaded from a config file.
-    $dir = __DIR__;
-    $cmd = __DIR__ . '/vendor/bin/phpcs --standard=PSR2 --report=emacs';
-    $regex = '/:(\\d+):\\d+/';
+    $cmd = $config['command'];
+    $regex = $config['error_line_num_regex'];
 
     $errs_in_staged_files = array();
+    $staged_files = get_staged_files();
     foreach ($staged_files as $file) {
         $errs_in_staged_files[$file] = get_style_errors($file, $cmd, $regex);
     }
