@@ -16,11 +16,9 @@ require_once realpath(__DIR__ . '/vendor/autoload.php');
 
 /* @brief Return an array of files that have been staged for the current commit.
  */
-function get_staged_PHP_files()
+function get_staged_files()
 {
     // Get array of files being added to commit (git diff --cached should work)
-    // GRIPE I should probably expand Gitter to support this operation, rather
-    // than shelling out.
     $staged_files = array();
     $cmd = 'git diff --cached --name-only';
     exec($cmd, $staged_files, $status);
@@ -28,15 +26,7 @@ function get_staged_PHP_files()
         throw new RuntimeException("$cmd exit code was $status!");
     }
 
-    $staged_PHP_files = array();
-    foreach ($staged_files as $filename) {
-        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-        if ($ext === 'php') {
-            $staged_PHP_files[] = $filename;
-        }
-    }
-
-    return $staged_PHP_files;
+    return $staged_files;
 }
 
 /* @brief Return an array of line numbers added to $filename in the current
@@ -47,6 +37,7 @@ function get_staged_line_numbers($filename)
     $added_line_nums = array();
     $diff_lines = array();
     exec("git diff --cached -U0 $filename", $diff_lines, $status);
+
     $line_num = null;
     foreach ($diff_lines as $line) {
         $prefix = substr($line, 0, 3);
@@ -63,93 +54,127 @@ function get_staged_line_numbers($filename)
     return $added_line_nums;
 }
 
+function filter_errors_by_cur_diff($errors_in_staged_files)
+{
+    $staged_errors = array();
+    foreach ($errors_in_staged_files as $filename => $file_errors) {
+        $staged_line_nums = get_staged_line_numbers($filename);
+
+        $staged_file_errors = array();
+
+        foreach ($file_errors as $line_num => $errors) {
+            if (in_array($line_num, $staged_line_nums)) {
+                $staged_file_errors[$line_num] = $errors;
+            }
+        }
+
+        $staged_errors[$filename] = $staged_file_errors;
+    }
+
+    return $staged_errors;
+}
+
 /* @brief Return an array of messages outlining style errors in $filename.
+ *
+ * @param string $filename
+ * cwd-relative path to the file to be scanned for errors.
+ *
+ * @param string $cmd
+ * The command to be run on $filename.
+ *
+ * @param string $line_match_regex
+ * A poorly-named regular expression that is run on each line of output from
+ * $cmd. If it matches, then the first captured group is used as the line
+ * number the message applies to. If it does not match, then the line is
+ * discarded.
  */
-function get_style_errors($filename)
+function get_style_errors($filename, $cmd, $line_match_regex)
 {
     $staged_file_errors = array();
 
-    // Committing with syntax errors is *never* okay.
-    $syntax_check_msgs = array();
-    exec("php -l $filename", $syntax_check_msgs, $syntax_check_status);
-    if ($syntax_check_status !== 0) {
-        $staged_file_errors[] = $syntax_check_msgs[2];
-    }
+    // Run the specified command on $filename.
+    $output = array();
+    exec($cmd . ' ' . escapeshellarg($filename), $output);
 
-    // Run PHP CS on $filename
-    // (must eventually load config options and coding style from somewhere)
-    // Save cwd so we can restore it after CS stomps it.
-    $cwd = getcwd();
-    $phpcs = new PHP_CodeSniffer();
-    $phpcs->setTokenListeners('PSR2');
-    // GRIPE I don't understand why I have to call these, but apparently I
-    // do.
-    $phpcs->populateCustomRules();
-    $phpcs->populateTokenListeners();
-    $phpcs_file = $phpcs->processFile($cwd . DIRECTORY_SEPARATOR . $filename);
-    $style_errors = $phpcs_file->getErrors();
-    $style_warnings = $phpcs_file->getWarnings();
-    chdir($cwd);
+    foreach ($output as $line) {
+        $matches = array();
+        $result = preg_match($line_match_regex, $line, $matches);
+        if ($result === 1) {
+            $line_num = (int) $matches[1];
 
-    if (count($style_errors) < 1 && count($style_warnings) < 1) {
-        return $staged_file_errors;
-    }
-
-    // Find the style errors that are actually part of the staged changes.
-    $added_line_nums = get_staged_line_numbers($filename);
-    foreach ($style_errors as $line_num => $error) {
-        if (in_array($line_num, $added_line_nums) !== true) {
-            continue;
-        }
-
-        foreach ($error as $column => $column_errors) {
-            foreach ($column_errors as $error_info) {
-                $staged_file_errors[] = $error_info['message'] .
-                    " (line $line_num, column $column)";
+            if (! isset($staged_file_errors[$line_num])) {
+                $staged_file_errors[$line_num] = array();
             }
-        }
-    }
 
-    // GRIPE This is incredibly un-DRY. Hopefully when I abstract these
-    // into somewhere else they get cleaned up.
-    foreach ($style_warnings as $line_num => $error) {
-        if (in_array($line_num, $added_line_nums) !== true) {
-            continue;
-        }
-
-        foreach ($error as $column => $column_errors) {
-            foreach ($column_errors as $error_info) {
-                $staged_file_errors[] = $error_info['message'] .
-                    " (line $line_num, column $column)";
-            }
+            $staged_file_errors[$line_num][] = $line;
         }
     }
 
     return $staged_file_errors;
 }
 
+/* @brief Return array of end-user config data for this script.
+ *
+ * Currently assumes config file lives in the same dir as this script, but that
+ * might be dumb. Consider adding a command-line flag for specifying
+ * the path.
+ */
+function load_config()
+{
+    $config_file_path = __FILE__ . '.conf';
+    $json = file_get_contents($config_file_path);
+
+    return json_decode($json, true);
+}
+
 function main()
 {
-    $staged_files = get_staged_PHP_files();
+    $config = load_config();
 
-    $staged_errors = array();
+    $cmd = $config['command'];
+    $regex = $config['error_line_num_regex'];
+
+    $errs_in_staged_files = array();
+    $staged_files = get_staged_files();
     foreach ($staged_files as $file) {
-        $staged_errors[$file] = get_style_errors($file);
+        $errs_in_staged_files[$file] = get_style_errors($file, $cmd, $regex);
     }
 
-    foreach ($staged_errors as $file => $errors) {
-        if (count($errors) > 0) {
+    // TODO Long-term I hope to make this a more generic diff engine, so there
+    // can be pre-commit and pre-receive variations on this script, rather than
+    // a function that operates by side effect.
+    $staged_errors = filter_errors_by_cur_diff($errs_in_staged_files);
+
+    $cancel_commit = false;
+    $msg_regex = isset($config['msg_regex']) ?
+        $config['msg_regex']:
+        '/(.*)/'; // By default, capture the whole message.
+    if (isset($config['msg_regex'])) {
+        $msg_regex = $config['msg_regex'];
+    }
+
+    foreach ($staged_errors as $file => $file_errors) {
+        if (count($file_errors) > 0) {
             echo "$file has style errors:\n";
 
-            foreach ($errors as $error) {
-                echo $error . "\n";
+            foreach ($file_errors as $line_num => $line_errors) {
+                foreach ($line_errors as $error) {
+                    $matches = array();
+                    preg_match($msg_regex, $error, $matches);
+                    echo "Line $line_num: " . $matches[1] . "\n";
+                }
             }
 
-            echo "Commit canceled. Fix style errors and try again.\n";
-
-            exit(1);
+            $cancel_commit = true;
         }
     }
+
+    if ($cancel_commit) {
+        echo "Commit canceled. Fix style errors and try again.\n";
+
+        exit(1);
+    }
+
 
     exit(0);
 }
