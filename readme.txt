@@ -1,10 +1,16 @@
-PHP Codesniffer is a nifty little thing, and an excellent way to catch coding
-style violations.
+About
+=====
 
-Running it as a pre-commit hook is therefore an obvious thing to do.
+This git pre-commit hook blocks commits that contain style errors.
 
-However, when you're working on large legacy codebases, with files thousands of lines long and hardcoded values you don't want to touch as part of your current changes, applying style fixes to each file you've touched can actually be a significant source of pain.
+It only complains about errors added by the diff - if someone else committed
+crap code in the past, it does not penalize you for leaving it alone. This
+attribute makes it useful for enforcing a style guideline on ugly legacy code
+that did not previously have one (which is why it was written).
 
-Therefore, this little project has come to be.
+It is language- and style-agnostic. Its config file requires a command to
+run the style check, so you can use whatever style checker and configuration
+is best for your project.
 
-The goal: run PHP CS on the files being committed, but only complain about errors the current commit adds.
+This is still under development, and the interface may change, so it is not yet
+documented. Read The Source if you would use it.
