@@ -161,7 +161,7 @@ function main()
                 foreach ($line_errors as $error) {
                     $matches = array();
                     preg_match($msg_regex, $error, $matches);
-                    echo $matches[1] . "\n";
+                    echo "Line $line_num: " . $matches[1] . "\n";
                 }
             }
 
