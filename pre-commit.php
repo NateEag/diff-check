@@ -1,18 +1,16 @@
 #! /usr/bin/env php
 <?php
 
-/* @brief Git pre-commit hook to enforce a PHP coding style.
+/* @brief Git pre-commit hook to enforce coding style.
  *
- * It uses CodeSniffer to check the current patch's style, and aborts the
- * commit if it adds style errors.
+ * It uses the style checker of your choice, git diff, and a regex or two to
+ * make sure the new commit does not add any style violations.
  *
- * Unlike many CodeSniffer-based pre-commit hooks, it only checks the lines
- * being added for style errors. This makes it ideal for use with large, ugly
- * codebases, as it lets you enforce a coding style without forcing devs to fix
- * the bulk of an ugly file in order to pass style checks.
+ * Unlike many style checker hooks, it only checks the lines being added for
+ * style errors. This makes it ideal for use with large, ugly codebases, as it
+ * lets you enforce a coding style without forcing devs to fix the bulk of an
+ * ugly file in order to pass style checks.
  */
-
-require_once realpath(__DIR__ . '/vendor/autoload.php');
 
 /* @brief Return an array of files that have been staged for the current commit.
  */
