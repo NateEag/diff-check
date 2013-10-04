@@ -1,6 +1,6 @@
 {
     "name": "nateeag/php-codesniffer-pre-commit-hook",
-    "description": "Git pre-commit hook that runs PHP CodeSniffer, and only complains about sniffs on modified lines.",
+    "description": "Git pre-commit hook that runs a style checker of your choice, and only complains about crap you added.",
     "authors": [
         {
             "name": "Nate Eagleson",
@@ -9,8 +9,7 @@
         }
     ],
     "require": {
-        "squizlabs/php_codesniffer": "master-dev",
-        "klaussilveira/gitter": "0.2.0"
+        "squizlabs/php_codesniffer": "master-dev"
     },
     "require-dev": {
         "phpunit/phpunit": "3.7.*"
