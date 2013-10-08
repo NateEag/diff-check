@@ -136,6 +136,28 @@ class PreCommitHookTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(0, $status);
     }
 
+    public function testErrorsInMultipleFiles()
+    {
+        copy(
+            $this->fixture_dir . DIR_SEP . 'break-plural-files'. DIR_SEP . 'functions.php',
+            $this->git_dir . DIR_SEP . 'functions.php'
+        );
+
+        copy(
+            $this->fixture_dir . DIR_SEP . 'break-plural-files'. DIR_SEP . 'bad-class.php',
+            $this->git_dir . DIR_SEP . 'bad-class.php'
+        );
+
+        $output = shell_exec(
+            'cd ' . $this->git_dir . ' && git add functions.php && ' .
+            'git add bad-class.php && git commit -m a 2>&1'
+        );
+        $output = explode("\n", $output);
+
+        $this->assertContains("bad-class.php has style errors:", $output);
+        $this->assertContains("functions.php has style errors:", $output);
+    }
+
     public function testIgnoreNonPHPFiles()
     {
         $result = copy(
