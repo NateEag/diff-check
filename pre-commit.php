@@ -151,24 +151,28 @@ function main()
         $msg_regex = $config['msg_regex'];
     }
 
+    $err_msgs = array();
     foreach ($staged_errors as $file => $file_errors) {
         if (count($file_errors) > 0) {
-            echo "$file has style errors:\n";
-
+            $file_err_msgs = array("$file has style errors:");
             foreach ($file_errors as $line_num => $line_errors) {
                 foreach ($line_errors as $error) {
                     $matches = array();
                     preg_match($msg_regex, $error, $matches);
-                    echo "Line $line_num: " . $matches[1] . "\n";
+                    $file_err_msgs[] = "Line $line_num: " . $matches[1];
                 }
             }
-
-            $cancel_commit = true;
+            $err_msgs[] = implode("\n", $file_err_msgs);
         }
+
+        $file_err_msg = '';
+        $file_err_msgs = array();
     }
 
-    if ($cancel_commit) {
+    if (count($err_msgs) > 0) {
         echo "Commit canceled. Fix style errors and try again.\n";
+
+        echo implode("\n\n", $err_msgs);
 
         exit(1);
     }
