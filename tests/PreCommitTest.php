@@ -226,6 +226,28 @@ class PreCommitHookTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(0, $status);
     }
 
+    public function testCheckNestedFile()
+    {
+        mkdir($this->git_dir . DIR_SEP . 'include');
+
+        copy(
+            $this->fixture_dir . DIR_SEP . 'add-nested-php-file'. DIR_SEP .
+            'include' . DIR_SEP . 'test.php',
+            $this->git_dir . DIR_SEP . 'include' . DIR_SEP . 'test.php'
+        );
+
+        $output = array();
+        $status = null;
+        exec(
+            'cd ' . $this->git_dir . ' && git add . && ' .
+            'git commit -m a',
+            $output,
+            $status
+        );
+
+        $this->assertEquals(1, $status);
+    }
+
     protected function tearDown()
     {
         exec('rm -rf ' . escapeshellarg($this->git_dir) . '');
