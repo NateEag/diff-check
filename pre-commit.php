@@ -13,8 +13,11 @@
  */
 
 /* @brief Return an array of files that have been staged for the current commit.
+ *
+ * @param array $file_extensions
+ * Array of filename extensions that indicate a file should be checked.
  */
-function get_staged_files()
+function get_staged_files($file_extensions)
 {
     // Get array of new/modified files in commit. We do *not* want deleted
     // files, since there's no sense in checking style of deleted files.
@@ -26,7 +29,18 @@ function get_staged_files()
         throw new RuntimeException("$cmd exit code was $status!");
     }
 
-    return $staged_files;
+    $checked_files = array();
+    foreach ($staged_files as $filename) {
+        foreach ($file_extensions as $ext) {
+            if (substr($filename, -strlen($ext)) === $ext) {
+                $checked_files[] = $filename;
+
+                continue;
+            }
+        }
+    }
+
+    return $checked_files;
 }
 
 /* @brief Return an array of line numbers added to $filename in the current
@@ -146,9 +160,10 @@ function main()
 
     $cmd = $config['command'];
     $regex = $config['error_line_num_regex'];
+    $checked_file_extensions = $config['checked_file_extensions'];
 
     $errs_in_staged_files = array();
-    $staged_files = get_staged_files();
+    $staged_files = get_staged_files($checked_file_extensions);
     foreach ($staged_files as $file) {
         $errs_in_staged_files[$file] = get_style_errors($file, $cmd, $regex);
     }

@@ -48,6 +48,7 @@ class PreCommitHookTest extends PHPUnit_Framework_TestCase
             $git_hooks_dir . DIR_SEP . 'pre-commit.conf',
             '{"command": "' . $command . '", ' .
             '"error_line_num_regex": "/:([0-9]+):[0-9]+/", ' .
+            '"checked_file_extensions": ["php"],' .
             '"msg_regex": "/:[0-9]+:[0-9]+: (.*)/"}'
         );
 
@@ -207,11 +208,11 @@ class PreCommitHookTest extends PHPUnit_Framework_TestCase
         );
     }
 
-    public function testIgnoreNonPHPFiles()
+    public function testIgnoreUncheckedFiles()
     {
         $result = copy(
-            $this->fixture_dir . DIR_SEP . 'add-non-php-file'. DIR_SEP . 'functions.php',
-            $this->git_dir . DIR_SEP . 'functions.php'
+            $this->fixture_dir . DIR_SEP . 'add-non-php-file'. DIR_SEP . 'readme.txt',
+            $this->git_dir . DIR_SEP . 'readme.txt'
         );
 
 
