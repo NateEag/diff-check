@@ -16,9 +16,11 @@
  */
 function get_staged_files()
 {
-    // Get array of files being added to commit (git diff --cached should work)
+    // Get array of new/modified files in commit. We do *not* want deleted
+    // files, since there's no sense in checking style of deleted files.
+    // The --diff-filter option gets Added, Copied, and Modified files.
     $staged_files = array();
-    $cmd = 'git diff --cached --name-only';
+    $cmd = 'git diff --cached --name-only --diff-filter=[ACM]';
     exec($cmd, $staged_files, $status);
     if ($status !== 0) {
         throw new RuntimeException("$cmd exit code was $status!");

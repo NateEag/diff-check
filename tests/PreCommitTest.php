@@ -103,7 +103,9 @@ class PreCommitHookTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(1, $status);
     }
 
-    public function testIgnoreStyleErrorsInEarlierCommit()
+    /* @brief Helper to add a commit with style errors.
+     */
+    protected function addStyleErrorCommit()
     {
         copy(
             $this->fixture_dir . DIR_SEP . 'add-bad-function'. DIR_SEP . 'functions.php',
@@ -116,8 +118,11 @@ class PreCommitHookTest extends PHPUnit_Framework_TestCase
             $output = array(),
             $status
         );
+    }
 
-        $this->assertEquals(0, $status);
+    public function testIgnoreStyleErrorsInEarlierCommit()
+    {
+        $this->addStyleErrorCommit();
 
         copy(
             $this->fixture_dir . DIR_SEP . 'edit-bad-function'. DIR_SEP . 'functions.php',
@@ -154,6 +159,26 @@ class PreCommitHookTest extends PHPUnit_Framework_TestCase
 
         $this->assertContains("bad-class.php has style errors:", $output);
         $this->assertContains("functions.php has style errors:", $output);
+    }
+
+    public function testIgnoreDeletedFiles()
+    {
+        $this->addStyleErrorCommit();
+
+        $status = null;
+        $output = array();
+        exec(
+            'cd ' . $this->git_dir . ' && git rm functions.php && ' .
+            'git commit -m a 2>&1',
+            $output,
+            $status
+        );
+
+        $this->assertNotContains(
+            "fatal: ambiguous argument 'functions.php': unknown revision or " .
+            "path not in the working tree.",
+            $output
+        );
     }
 
     public function testIgnoreNonPHPFiles()
