@@ -181,6 +181,32 @@ class PreCommitHookTest extends PHPUnit_Framework_TestCase
         );
     }
 
+    public function testIgnoreUnstagedChanges()
+    {
+        // Make and stage some changes. These should be in our error output.
+        copy(
+            $this->fixture_dir . DIR_SEP . 'add-bad-function'. DIR_SEP . 'functions.php',
+            $this->git_dir . DIR_SEP . 'functions.php'
+        );
+
+        exec('cd ' . $this->git_dir . ' && git add functions.php');
+
+        // Make *unstaged* change. This should not be noticed.
+        copy(
+            $this->fixture_dir . DIR_SEP . 'add-error-to-good-function' .
+            DIR_SEP . 'functions.php',
+            $this->git_dir . DIR_SEP . 'functions.php'
+        );
+
+        $output = array();
+        exec('cd ' . $this->git_dir . ' && git commit -m a 2>&1', $output);
+
+        $this->assertNotContains(
+            'Line 5: error - Each PHP statement must be on a line by itself',
+            $output
+        );
+    }
+
     public function testIgnoreNonPHPFiles()
     {
         $result = copy(

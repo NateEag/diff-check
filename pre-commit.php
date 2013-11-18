@@ -92,9 +92,20 @@ function get_style_errors($filename, $cmd, $line_match_regex)
 {
     $staged_file_errors = array();
 
-    // Run the specified command on $filename.
+    // Get a snapshot of the file as it will appear after commiting.
+    // The ':filename' arg to git show shows the file as it currently stands in
+    // the index.
+    $tmp_dir = sys_get_temp_dir();
+    $cur_time = time();
+    $tmp_file_path = $tmp_dir . DIRECTORY_SEPARATOR . $cur_time . '.' . $filename;
+
+    $filename_arg = ":$filename";
+    $make_tmp_file_cmd = 'git show ' . escapeshellarg($filename_arg) . ' > ' .
+        escapeshellarg($tmp_file_path);
+    exec($make_tmp_file_cmd);
+
     $output = array();
-    exec($cmd . ' ' . escapeshellarg($filename), $output);
+    exec($cmd . ' ' . $tmp_file_path, $output);
 
     foreach ($output as $line) {
         $matches = array();
@@ -109,6 +120,8 @@ function get_style_errors($filename, $cmd, $line_match_regex)
             $staged_file_errors[$line_num][] = $line;
         }
     }
+
+    unlink($tmp_file_path);
 
     return $staged_file_errors;
 }
