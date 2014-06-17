@@ -104,6 +104,22 @@ class PreCommitHookTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(1, $status);
     }
 
+    public function testPreventOneLineErrorCommit()
+    {
+        $source = $this->fixture_dir . DIR_SEP . 'add-one-line-error' .
+            DIR_SEP . 'functions.php';
+        $target = $this->git_dir . DIR_SEP . 'functions.php';
+        copy($source, $target);
+
+        $cmd = 'cd ' . escapeshellarg($this->git_dir) . ' && ' .
+            'git add functions.php && ' .
+            'git commit -m a';
+
+        exec($cmd, $output = array(), $status);
+
+        $this->assertEquals(1, $status);
+    }
+
     /* @brief Helper to add a commit with style errors.
      */
     protected function addStyleErrorCommit()

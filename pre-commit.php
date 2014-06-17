@@ -57,7 +57,12 @@ function get_staged_line_numbers($filename)
         $prefix = substr($line, 0, 3);
         if (substr($prefix, 0, 2) === '@@') {
             $start_pos = strpos($line, '+');
-            $end_pos = strpos($line, ',', $start_pos);
+            $end_pos = strpos($line, ' ', $start_pos);
+            $comma_pos = strpos($line, ',', $start_pos);
+            if ($comma_pos !== false) {
+                $end_pos = $comma_pos;
+            }
+
             $line_num = (int) substr($line, $start_pos, $end_pos - $start_pos);
         } elseif (substr($prefix, 0, 1) === '+' && $prefix !== '+++') {
             $added_line_nums[] = $line_num;
