@@ -211,6 +211,7 @@ function main()
         echo "Commit canceled. Fix style errors and try again.\n";
 
         echo implode("\n\n", $err_msgs);
+        echo "\n";
 
         exit(1);
     }
