@@ -208,7 +208,7 @@ function main()
     }
 
     if (count($err_msgs) > 0) {
-        echo "Commit canceled. Fix style errors and try again.\n";
+        echo "Commit canceled. Fix style errors and try again.\n\n";
 
         echo implode("\n\n", $err_msgs);
         echo "\n";
