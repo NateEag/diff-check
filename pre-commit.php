@@ -111,7 +111,7 @@ function get_style_errors($filename, $cmd, $line_match_regex)
 {
     $staged_file_errors = array();
 
-    // Get a snapshot of the file as it will appear after commiting.
+    // Get a snapshot of the file as it will appear after committing.
     // The ':filename' arg to git show shows the file as it currently stands in
     // the index.
     $tmp_dir = sys_get_temp_dir();
