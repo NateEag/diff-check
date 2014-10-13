@@ -14,3 +14,6 @@ is best for your project.
 
 This is still under development, and the interface may change, so it is not yet
 documented. Read The Source if you would use it.
+
+I'd like to adapt it to verify diffs and support multiple ways to generate
+them, so that it isn't useful only as a git pre-commit hook. Baby steps.
