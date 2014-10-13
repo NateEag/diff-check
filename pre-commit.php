@@ -166,7 +166,7 @@ function main()
 {
     $config = load_config();
 
-    $cmd = $config['command'];
+    $cmd = $config['command'] . ' ' . $config['command_opts'];
     $regex = $config['error_line_num_regex'];
     $checked_file_extensions = $config['checked_file_extensions'];
 
