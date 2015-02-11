@@ -119,7 +119,7 @@ function get_style_errors($filename, $cmd, $line_match_regex)
     // GRIPE You'd think this should be DIRECTORY_SEPARATOR, but since Git Bash
     // uses '/', this is actually more portable.
     $tmp_filename = str_replace('/', '-', $filename);
-    $tmp_file_path = $tmp_dir . DIRECTORY_SEPARATOR . $cur_time . '.' . $tmp_filename;
+    $tmp_file_path = $tmp_dir . '/' . $cur_time . '.' . $tmp_filename;
 
     $filename_arg = ":$filename";
     $make_tmp_file_cmd = 'git show ' . escapeshellarg($filename_arg) . ' > ' .
