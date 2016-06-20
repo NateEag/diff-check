@@ -1,0 +1,49 @@
+# Redesign As Filter
+
+I would like to redesign this program as a Unix-style filter.
+
+## Motivation
+
+This program's current incarnation can be used only as a git pre-commit hook.
+
+A better design for it would be a Unix-style filter that receives lines of
+style check output on stdin (or from an input file), compares them to a patch,
+and outputs only the lines of input that correspond to an added or modified
+line in the patch.
+
+That way, it could be used in more contexts, and it would also be simple to
+adapt for use with other version control systems.
+
+## Possible CLI Help Message
+
+Filter linter output to include only issues present in a patchfile.
+
+Usage: <linter> | diff-check <PATCHFILE|-g> <LINE-NUM-PATTERN> [-c]
+
+Arguments:
+
+  PATCHFILE
+
+      Path to the patch to filter the linter's output by. Not compatible with
+      the -g option.
+
+  LINE-NUM-PATTERN
+
+      Regular expression for extracting line number from each line of linter's
+      output.
+
+      In principle it would make sense to support an optional
+      COLUMN-NUMBER-PATTERN, or even COLUMN-RANGE-PATTERN, so that we can
+      filter out lines that apply only to an unedited part of a line in the
+      patch. I'm not sure that would be worth the effort.
+
+Options:
+
+  -g, --generate-patch
+
+      Command to generate the filtering patch. Not compatible with PATCHFILE
+      argument, but one or the other must be provided.
+
+  -c, --config
+
+      Path to config file.
